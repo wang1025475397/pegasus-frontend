@@ -1,0 +1,35 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare publish dir
+        shell: bash
+        run: |
+          set -e
+          mkdir -p public
+          if [ -d dist ]; then cp -r dist/* public/ 2>/dev/null || true; fi
+          if [ -d build ]; then cp -r build/* public/ 2>/dev/null || true; fi
+          if ls -1 ./*.apk >/dev/null 2>&1; then cp -f ./*.apk public/; fi
+          if [ -z "$(ls -A public)" ]; then echo "Pegasus artifacts" > public/index.html; fi
+
+      - name: Deploy
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./public
+          keep_files: true

@@ -11,6 +11,8 @@ env:
 jobs:
   android:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     strategy:
       matrix:
         include:
@@ -88,12 +90,7 @@ jobs:
       - name: Deploy
         if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
         uses: peaceiris/actions-gh-pages@v4
-        # with:
-        #   external_repository: mmatyas/pegasus-deploy-staging
-        #   personal_token: ${{ secrets.PEGASUS_GHACTIONS_TOKEN }}
-        #   publish_branch: continuous-${{ matrix.name }}
-        #   publish_dir: ./dist
-        #   force_orphan: true
         with:
-          personal_token: ${{ secrets.PERSONAL_TOKEN }}
-          publish_dir: ./public
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./dist
