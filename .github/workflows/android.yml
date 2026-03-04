@@ -43,7 +43,6 @@ jobs:
         run: .circleci/build.sh
 
       - name: Package (debug)
-        if: (github.event_name != 'push' && github.event_name != 'workflow_dispatch') || github.ref != 'refs/heads/master'
         env:
           ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
@@ -54,11 +53,26 @@ jobs:
           --output ${PWD}/installdir
           --android-platform android-30
           --gradle
-      - name: Package (debug), stage
-        if: (github.event_name != 'push' && github.event_name != 'workflow_dispatch') || github.ref != 'refs/heads/master'
-        run: cp
-          installdir/build/outputs/apk/debug/installdir-debug.apk
-          dist/pegasus-fe_$(git describe --always)_${{ matrix.name }}.apk
+      - name: Stage APKs to dist
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          if [ -d installdir/build/outputs/apk ]; then
+            mapfile -t apks < <(find installdir/build/outputs/apk -type f -name "*.apk" | sort)
+          else
+            mapfile -t apks < <(find installdir -maxdepth 6 -type f -name "*.apk" | sort)
+          fi
+          if [ "${#apks[@]}" -eq 0 ]; then
+            echo "No APKs found under installdir. Current tree:"
+            find installdir -maxdepth 6 -type f | sed 's/^/  /' || true
+            exit 1
+          fi
+          for f in "${apks[@]}"; do
+            base="$(basename "$f")"
+            cp -f "$f" "dist/pegasus-fe_$(git describe --always)_${{ matrix.name }}_${base}"
+          done
+          ls -lah dist
 
       # - name: Package (release), prep
       #   if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
